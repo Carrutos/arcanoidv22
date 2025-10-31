@@ -35,11 +35,16 @@ int rayx, rayy, hitx, hity, hitd, trigger1x, trigger1y, trigger2x, trigger2y;
 bool diry;
 HBITMAP hBack, mandrill, tiger;
 
+int levelLen[] = { 21,18 };
+
+
+
 box boxes_lvl1[boxesInL1];
 box boxes_lvl2[boxesInL2];
-box* box_ptrs[] = { &boxes_lvl1[0] ,&boxes_lvl2[0] };
 
-box* box_ptr = box_ptrs[level - 1];//NULL
+box* box_ptr[] = {boxes_lvl1 ,boxes_lvl2};
+
+
 
 HBITMAP loadImage(const char* name)
 {
@@ -69,32 +74,39 @@ void InitGame() {
 	int boxLen = 8;
 	int offset = 0;
 	int rowlengths[6] = { 0, 8, 15, 0, 7, 13 };
+
+	//box_ptr = boxes_lvl1;
+
 	for (int i = 0; i < 39; i++) {
 		//size
 		//boxes[i].width = window.width / (8 - i / boxesInL1);
 		//boxes[i].height = window.height / 8;
 	}
-
+	int a = 0;
 	for (int y = 0; y < std::size(rowlengths); y++)
 		//position
 	{
 		if (y == std::size(rowlengths) / 2) {
 			boxLen += 2;
-			level = 2;
+			level = 2; 
 		}
+
+		box* ptr = box_ptr[level - 1];
+
 		for (int x = 0; x < boxLen; x++) {
-			box_ptr[rowlengths[y] + x].x = offset + box_ptr[rowlengths[y] + x].width * x;
-			box_ptr[rowlengths[y] + x].height = window.height / 8;
-			box_ptr[rowlengths[y] + x].width = window.width / (9 - level);
+
+			ptr[rowlengths[y] + x].width = window.width / (9 - level);
+			ptr[rowlengths[y] + x].x = offset + ptr[rowlengths[y] + x].width * x;
+			ptr[rowlengths[y] + x].height = window.height / 8;
 			if (y < 3) {
-				box_ptr[rowlengths[y] + x].y = boxToTop + box_ptr[rowlengths[y] + x].height * y;
+				ptr[rowlengths[y] + x].y = boxToTop + ptr[rowlengths[y] + x].height * y;
 			}
 			else {
-				box_ptr[rowlengths[y] + x].y = ballHit - box_ptr[rowlengths[y] + x].height * (5 - y);
+				ptr[rowlengths[y] + x].y = ballHit - ptr[rowlengths[y] + x].height * (5 - y);
 			}
 		}
 		boxLen--;
-		offset += box_ptr[y].width / 2;
+		offset += ptr[y].width / 2;
 	}
 	level = 1;
 }
@@ -374,14 +386,11 @@ void ShowImage() {
 	ShowBitmap(window.context, 0, 0, window.width, window.height, hBack);
 	ShowBitmap(window.context, racket.x, racket.y, racket.width, racket.height, racket.hBitmap);
 	ShowBitmap(window.context, ball.x, ball.y, ball.width, ball.height, ball.hBitmap);
-	for (int i = 0; i < boxesInL1; i++) {
-		ShowBitmap(window.context, box_ptr[i].x, box_ptr[i].y, box_ptr[i].width, box_ptr[i].height, mandrill);
+	for (int i = 0; i < levelLen[level-1]; i++) {
+		box* ptr = box_ptr[level-1];
+		ShowBitmap(window.context, ptr[i].x, ptr[i].y, ptr[i].width, ptr[i].height, mandrill);
 	}
-	if (level == 2) {
-		for (int i = 0; i < boxesInL2; i++) {
-			ShowBitmap(window.context, box_ptr[i].x, box_ptr[i].y, box_ptr[i].width, box_ptr[i].height, tiger);
-		}
-	}
+	
 }
 
 void triggerPoints() {
@@ -458,24 +467,25 @@ void sphere() {
 	bool hita = false;
 	for (float angle = vecAngleRad - d90; angle <= vecAngleRad + d90; angle += d90 * 2.f / 10.f)
 	{
-		float x = ball.x - sin(angle) * ball.width / 2 + ball.width / 2 + ball.speed * ball.dirx;
-		float y = ball.y - cos(angle) * ball.height / 2 + ball.height / 2 + ball.speed * (2 * diry - 1);
-		SetPixel(window.context, x, y, RGB(0, 0, 255));
+		float x = ball.x + cos(angle) * ball.width / 2 + ball.width / 2 + ball.speed * ball.dirx;
+		float y = ball.y + sin(angle) * ball.height / 2 + ball.height / 2 + ball.speed * (2 * diry - 1);
+		SetPixel(window.context, x, y, RGB(222, 222, 255));
 		i++;
 
-		for (int i = 0; i < boxesInL1; i++) {
-			i += boxesInL1 * (1 / (3 - level));
-			if (x + ball.speed >= boxes[i].x &&
-				x - ball.speed <= boxes[i].x + boxes[i].width &&
-				y + ball.speed >= boxes[i].y &&
-				y - ball.speed <= boxes[i].y + boxes[i].height) {
+		for (int i = 0; i < levelLen[level - 1]; i++) {
+			box* ptr = box_ptr[level - 1];
+			//i += boxesInL1 * (1 / (3 - level));
+			if (x + ball.speed >= ptr[i].x &&
+				x - ball.speed <= ptr[i].x + ptr[i].width &&
+				y + ball.speed >= ptr[i].y &&
+				y - ball.speed <= ptr[i].y + ptr[i].height) {
 				hita = true;
 				int paststep = 0;
 				if (angle < vecAngleRad) {
-					paststep = ball.speed - abs(boxes[i].x + boxes[i].width * (ball.dirx == -1) - x);
+					paststep = ball.speed - abs(ptr[i].x + ptr[i].width * (ball.dirx == -1) - x);
 				}
 				else {
-					paststep = ball.speed - abs(boxes[i].y + boxes[i].height * not(diry)-y);
+					paststep = ball.speed - abs(ptr[i].y + ptr[i].height * not(diry)-y);
 				}
 				past += paststep;
 				ball.x += paststep * ball.dirx;
@@ -486,7 +496,7 @@ void sphere() {
 				else {
 					diry = not(diry);
 				}
-				boxes[i].x = boxes[i].y = ballHit;
+				ptr[i].x = ptr[i].y = ballHit;
 				score++;
 				break;
 			}
@@ -499,11 +509,16 @@ void sphere() {
 			y - ball.speed <= 0) {
 			int paststep = 0;
 			hita = true;
-			if (angle < vecAngleRad) {
-				paststep = ball.speed - abs(x - window.width * (ball.dirx == 1));
+			if (ball.y - ball.speed <= 0) {
+				paststep = ball.speed - ball.y;
 			}
 			else {
-				paststep = ball.speed - abs(y - window.height * (diry == true));
+				if (angle < vecAngleRad) {
+					paststep = ball.speed - abs(x - window.width * (ball.dirx == 1));
+				}
+				else {
+					paststep = ball.speed - abs(y - window.height * (diry == true));
+				}
 			}
 			past += paststep;
 			ball.x += paststep * ball.dirx;
